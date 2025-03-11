@@ -172,3 +172,10 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+maps.py
+client_secret_24601087611-o6975ci33ibiuert99laeg169c500mag.apps.googleusercontent.com.json
+client_secret.json
+client_secret2.json
+places.csv
+token.json
+maps_try.py

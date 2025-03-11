@@ -1,6 +1,9 @@
 import tensorflow as tf
 import numpy as np
 from PIL import Image
+import os
+os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 def analyze_image_with_tensorflow(image):
     """
