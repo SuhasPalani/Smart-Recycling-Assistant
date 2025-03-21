@@ -17,6 +17,7 @@ This project uses TensorFlow for object detection and OpenAI for generating insi
 - **Python 3.8+**: Required for running the application.
 - **TensorFlow**: For object detection.
 - **OpenAI API Key**: For generating insights.
+- **GOOGLE API Key**: For generating Maps.
 - **Streamlit**: For the web interface.
 
 ## Installation
@@ -35,6 +36,7 @@ This project uses TensorFlow for object detection and OpenAI for generating insi
    Create a `.env` file in the project root with your OpenAI API key:
    ```plaintext
    OPENAI_API_KEY=your-openai-api-key-here
+   GOOGLE_API_KEY=your-google-api-key-here
    ```
 
 4. **Run the Application**:
