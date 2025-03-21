@@ -3,12 +3,18 @@ import numpy as np
 from PIL import Image
 import os
 from tensorflow.keras.applications import InceptionV3, ResNet50V2, EfficientNetB4
-from tensorflow.keras.preprocessing.image import img_to_array
+from tensorflow.keras.preprocessing.image import img_to_array,load_img
 from tensorflow.keras.applications.inception_v3 import preprocess_input as inception_preprocess
 from tensorflow.keras.applications.resnet_v2 import preprocess_input as resnet_preprocess
 from tensorflow.keras.applications.efficientnet import preprocess_input as efficient_preprocess
 import time
 
+
+# Load the saved model
+loaded_model = tf.keras.models.load_model('recycling_model.keras')
+
+# Define class labels
+class_labels = ['Cardboard', 'Food Organics', 'Glass', 'Metal', 'Miscellaneous Trash', 'Mixed', 'Paper', 'Plastic', 'Porcelain', 'Rubber', 'Textile', 'Vegetation']
 # Silence TensorFlow warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
@@ -49,65 +55,33 @@ def load_models():
     return models
 
 def analyze_image_with_tensorflow(image):
-    """
-    Analyze the uploaded image using an ensemble of models for better accuracy.
-    """
     try:
         start_time = time.time()
         
-        # Load all models
-        all_models = load_models()
+        # Preprocess the image
+        img = load_img(image, target_size=(224, 224))
+        img_array = img_to_array(img)
+        img_array = np.expand_dims(img_array, axis=0)
+        img_array = img_array / 255.0  # Normalize
         
-        # Convert image predictions to recycling categories
-        all_predictions = []
-        all_confidences = []
-        
-        # Process with each model and collect predictions
-        for model_name, model_info in all_models.items():
-            model = model_info["model"]
-            preprocess_func = model_info["preprocess"]
-            target_size = model_info["size"]
-            
-            # Preprocess the image for this model
-            img = Image.open(image).convert('RGB').resize(target_size)
-            img_array = img_to_array(img)
-            img_array = np.expand_dims(img_array, axis=0)
-            img_array = preprocess_func(img_array)
-            
-            # Get predictions
-            predictions = model.predict(img_array, verbose=0)
-            
-            # Decode predictions (top 5 for each model)
-            decoded = tf.keras.applications.imagenet_utils.decode_predictions(predictions, top=5)[0]
-            
-            # Add to our collection
-            for _, label, confidence in decoded:
-                all_predictions.append(label)
-                all_confidences.append(confidence)
+        # Get predictions
+        predictions = loaded_model.predict(img_array)
         
         # Determine the recycling category
-        recycling_type, matched_labels, confidence = determine_recycling_category(all_predictions, all_confidences)
+        predicted_class_index = np.argmax(predictions)
+        recycling_type = class_labels[predicted_class_index]
+        confidence = np.max(predictions)
         
         # Calculate processing time
         process_time = time.time() - start_time
         
-        if recycling_type:
-            return {
-                "recycling_type": recycling_type,
-                "matched_labels": matched_labels[:3],  # Top 3 matched labels
-                "confidence": confidence,
-                "process_time": process_time
-            }
-        else:
-            # Secondary analysis for non-determined items
-            general_object = all_predictions[all_confidences.index(max(all_confidences))]
-            return {
-                "recycling_type": "unknown",
-                "matched_labels": [general_object],
-                "confidence": max(all_confidences),
-                "process_time": process_time
-            }
-
+        return {
+            "recycling_type": recycling_type,
+            "matched_labels": [recycling_type],  # Simplified for this example
+            "confidence": confidence,
+            "process_time": process_time
+        }
+    
     except Exception as e:
         print(f"Error with TensorFlow model: {e}")
         return None
@@ -329,9 +303,16 @@ def get_nearby_disposal_locations(recycling_type, latitude, longitude):
         print(f"Error in get_nearby_disposal_locations: {e}")
         # Try fallback to a simple text search
         try:
+            # FIXED: Use the correct structure for fallback search
             text_request = service.places().searchText(
                 body={
-                    "textQuery": f"recycling near {latitude},{longitude}",
+                    "textQuery": f"recycling near me",
+                    "locationBias": {
+                        "circle": {
+                            "center": {"latitude": latitude, "longitude": longitude},
+                            "radius": 5000.0,
+                        }
+                    },
                     "maxResultCount": 5,
                 },
                 fields="places.id,places.displayName,places.location,places.formattedAddress"
